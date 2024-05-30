@@ -25,7 +25,7 @@ Sub MapUnits()
     For i = 2 To lastRowWs2
         name = ws2.Cells(i, 1).Value ' Edit the "1" depending on the col
         If nameUnitDict.exists(name) Then
-            ws2.Cells(i, "C").Value = nameUnitDict(name)
+            ws2.Cells(i, 3).Value = nameUnitDict(name) ' Edit the "3" depending on the col
         End If
     Next i
     
