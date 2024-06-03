@@ -37,17 +37,23 @@ Sub AssignGroups()
     Set groupRequirements = CreateObject("Scripting.Dictionary")
     Set newAssignments = New Collection
     Set allStudents = New Collection
-
+    
     ' Load past groups data into a dictionary of collections
     lastRowPast = wsPastGroups.Cells(wsPastGroups.Rows.Count, 1).End(xlUp).Row
     For i = 2 To lastRowPast
         studentName = wsPastGroups.Cells(i, 1).Value
         groupName = wsPastGroups.Cells(i, 2).Value
-        If Not pastGroups.exists(studentName) Then
+        If Not pastGroups.Exists(studentName) Then
+            ' If the student doesn't exist in the dictionary, add a new collection to store past groups
             Set pastGroups(studentName) = New Collection
         End If
+        ' Add the current past group to the student's collection of past groups
         pastGroups(studentName).Add groupName
-        allStudents.Add studentName
+        
+        ' Check if the student is already in the list of all students before adding
+        If Not CollectionContains(allStudents, studentName) Then
+            allStudents.Add studentName
+        End If
     Next i
 
     ' Load modules and grades into dictionary
@@ -56,7 +62,7 @@ Sub AssignGroups()
         studentName = wsModules.Cells(i, 1).Value
         moduleName = wsModules.Cells(i, 2).Value
         grade = wsModules.Cells(i, 3).Value
-        If Not modulesTaken.exists(studentName) Then
+        If Not modulesTaken.Exists(studentName) Then
             Set modulesTaken(studentName) = CreateObject("Scripting.Dictionary")
         End If
         modulesTaken(studentName)(moduleName) = grade
@@ -77,9 +83,12 @@ Sub AssignGroups()
 
         ' Find eligible students
         Dim student As Variant ' Declare as Variant for the loop
+        Dim groupNameStr As String
         For Each student In modulesTaken.Keys
             studentName = CStr(student) ' Cast to String
-            If Not pastGroups.exists(studentName) Or Not pastGroups(studentName).Contains(groupName) Then
+            groupNameStr = CStr(groupName) ' Cast to String
+            If Not pastGroups.Exists(studentName) Or Not PastGroupContains(pastGroups(studentName), groupNameStr) Then
+                ' If the student has no past groups or doesn't have the current group being considered
                 If IsEligible(studentName, moduleKeywords, modulesTaken) Then
                     eligibleStudents.Add Array(studentName, GetBestGrade(studentName, moduleKeywords, modulesTaken))
                 End If
@@ -136,6 +145,17 @@ Sub AssignGroups()
         Next j
     Next i
 End Sub
+
+Function PastGroupContains(pastGroupCollection As Collection, groupName As String) As Boolean
+    Dim pastGroup As Variant
+    For Each pastGroup In pastGroupCollection
+        If pastGroup = groupName Then
+            PastGroupContains = True
+            Exit Function
+        End If
+    Next pastGroup
+    PastGroupContains = False
+End Function
 
 Function IsEligible(studentName As String, moduleKeywords As Variant, modulesTaken As Variant) As Boolean
     Dim moduleName As Variant
@@ -240,3 +260,15 @@ Sub RemoveFromCollection(coll As Collection, item As Variant)
         End If
     Next i
 End Sub
+
+Function CollectionContains(coll As Collection, item As Variant) As Boolean
+    Dim i As Long
+    For i = 1 To coll.Count
+        If coll(i) = item Then
+            CollectionContains = True
+            Exit Function
+        End If
+    Next i
+    ' If the loop completes without finding the item, it doesn't exist in the collection
+    CollectionContains = False
+End Function
