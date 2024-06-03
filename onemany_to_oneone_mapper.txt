@@ -1,3 +1,5 @@
+' This script turns a one-to-many relation on a spreadsheet into a more standardized one-to-one relation
+
 Sub ReformatData()
     Dim srcSheet As Worksheet
     Dim destSheet As Worksheet
