@@ -1,6 +1,3 @@
-' This script goes through a list of names, their past units values and their modules taken (the input values), and assigns them to a list of available units (values)
-
-
 Sub AssignGroups()
     Dim wsPastGroups As Worksheet
     Dim wsModules As Worksheet
@@ -41,11 +38,15 @@ Sub AssignGroups()
     Set newAssignments = New Collection
     Set allStudents = New Collection
 
-    ' Load past groups data into dictionary
+    ' Load past groups data into a dictionary of collections
     lastRowPast = wsPastGroups.Cells(wsPastGroups.Rows.Count, 1).End(xlUp).Row
     For i = 2 To lastRowPast
         studentName = wsPastGroups.Cells(i, 1).Value
-        pastGroups(studentName) = wsPastGroups.Cells(i, 2).Value
+        groupName = wsPastGroups.Cells(i, 2).Value
+        If Not pastGroups.exists(studentName) Then
+            Set pastGroups(studentName) = New Collection
+        End If
+        pastGroups(studentName).Add groupName
         allStudents.Add studentName
     Next i
 
@@ -78,7 +79,7 @@ Sub AssignGroups()
         Dim student As Variant ' Declare as Variant for the loop
         For Each student In modulesTaken.Keys
             studentName = CStr(student) ' Cast to String
-            If (Not pastGroups.exists(studentName) Or pastGroups(studentName) <> groupName) Then
+            If Not pastGroups.exists(studentName) Or Not pastGroups(studentName).Contains(groupName) Then
                 If IsEligible(studentName, moduleKeywords, modulesTaken) Then
                     eligibleStudents.Add Array(studentName, GetBestGrade(studentName, moduleKeywords, modulesTaken))
                 End If
