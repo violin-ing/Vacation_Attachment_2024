@@ -106,16 +106,22 @@ Sub AssignUnits()
       
       
     ' Get a dictionary of possible units that each person can be posted to
-    Dim key As Variant
+    Dim name As Variant, unit As Variant
     Dim possibleUnits() As String
-    For Each key In newAssgnDict.Keys()
-        
-    Next key
+    Dim pastUnitsArr() As String
+    For Each name In newAssgnDict.Keys()
+        For Each unit In unitQuotaDict.Keys()
+            pastUnitsArr = pastUnitsDict(name)
+            If IsInArray(pastUnitsArr, CStr(unit)) Then
+                
+            End If
+        Next unit
+    Next name
     
     
     ' DEBUGGING LINES:
     Dim v As Variant, k As Variant
-    Debug.Print "BALLS"
+    Debug.Print "DEBUGGING"
     For Each k In modsTakenDict.Keys()
         Debug.Print k
         For Each v In modsTakenDict(k)
@@ -124,3 +130,14 @@ Sub AssignUnits()
     Next k
 End Sub
 
+
+Function IsInArray(arr() As String, target As String):
+    Dim x As Variant
+    For Each x In arr
+        If target = x Then
+            IsInArray = True
+            Exit Function
+        End If
+    Next x
+    IsInArray = False
+End Function
