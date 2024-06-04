@@ -1,342 +1,62 @@
-Sub AssignGroups()
-    Dim wsPastGroups As Worksheet
-    Dim wsModules As Worksheet
-    Dim wsNewAssignments As Worksheet
+Sub AssignUnits()
+    ' DECLARATIONS:
+    ' Worksheets
+    Dim wsNewAssgn As Worksheet
+    Dim wsPastUnits As Worksheet
+    Dim wsModGrades As Worksheet
     
-    Dim lastRowPast As Long
-    Dim lastRowModules As Long
-    Dim lastRowStuds As Long
+    ' Last Worksheet Rows
+    Dim lastRowNewAssgn As Long
+    Dim lastRowPastUnits As Long
+    Dim lastRowModGrades As Long
+    
+    ' Looping Variables
     Dim i As Long, j As Long
     
-    Dim studentName As String
-    Dim student As Variant
-    Dim eligibleStudents As Collection
-    Dim allStudents As Collection
+    ' Required Dictionaries
+    Dim pastUnitsDict As Object
+    Dim newAssgnDict As Object
+    Dim modGradesDict As Object
+    Dim availUnitsDict As Object
     
-    Dim groupNameStr As String
-    Dim groupName As Variant
     
-    Dim pastGroups As Object
-    Dim modulesTaken As Object
-    Dim groupRequirements As Object
-    Dim newAssignments As Object
+    ' Set worksheets
+    Set wsNewAssgn = ThisWorkbook.Sheets("NewAssignments")
+    Set wsPastUnits = ThisWorkbook.Sheets("PastUnits")
+    Set wsModGrades = ThisWorkbook.Sheets("ModuleGrades")
     
-    Dim quota As Long
-    Dim moduleName As String
-    Dim grade As String
-
-
-    ' Initialize worksheets
-    Set wsPastGroups = ThisWorkbook.Sheets("PastUnits")
-    Set wsModules = ThisWorkbook.Sheets("ModuleGrades")
+    ' Set Dictionaries
+    Set pastUnitsDict = CreateObject("Scripting.Dictionary")
+    Set newAssgnDict = CreateObject("Scripting.Dictionary")
+    Set modGradesDict = CreateObject("Scripting.Dictionary")
+    Set availUnitsDict = CreateObject("Scripting.Dictionary")
     
-    ' Reference existing "NewAssignments" sheet
-    On Error Resume Next
-    Set wsNewAssignments = ThisWorkbook.Sheets("NewAssignments")
-    On Error GoTo 0
+    ' Set last worksheet rows
+    lastRowNewAssgn = wsNewAssgn.Cells(wsNewAssgn.Rows.Count, "A").End(xlUp).Row
+    lastRowPastUnits = wsPastUnits.Cells(wsPastUnits.Rows.Count, "A").End(xlUp).Row
+    lastRowModGrades = wsModGrades.Cells(wsModGrades.Rows.Count, "A").End(xlUp).Row
     
-    If wsNewAssignments Is Nothing Then
-        MsgBox "No 'NewAssignments' sheet found. Please create one.", vbExclamation
-        Exit Sub
-    End If
-
-    ' Initialize dictionaries
-    Set pastGroups = CreateObject("Scripting.Dictionary")
-    Set modulesTaken = CreateObject("Scripting.Dictionary")
-    Set groupRequirements = CreateObject("Scripting.Dictionary")
-    Set newAssignments = CreateObject("Scripting.Dictionary")
-    Set allStudents = New Collection
     
-    ' Load all students into a collection
-    lastRowStuds = wsNewAssignments.Cells(wsNewAssignments.Rows.Count, 1).End(xlUp).Row
-    For i = 2 To lastRowStuds
-        studentName = wsNewAssignments(i, 1).Value
-        allStudents.Add studentName
-    Next i
+    ' Populate newAssgnDict with names from NewAssgn worksheet
+    For Each cell In wsNewAssgn.Range("A2:A" & lastRowNewAssgn) ' Assume names are in Col A
+        newAssgnDict.Add cell.Value, "0"
+    Next cell
     
-    ' Load past groups data into a dictionary of collections
-    lastRowPast = wsPastGroups.Cells(wsPastGroups.Rows.Count, 1).End(xlUp).Row
-    For i = 2 To lastRowPast
-        studentName = wsPastGroups.Cells(i, 1).Value
-        groupName = wsPastGroups.Cells(i, 2).Value
-        If Not pastGroups.Exists(studentName) Then
-            ' If the student doesn't exist in the dictionary, add a new collection to store past groups
-            Set pastGroups(studentName) = New Collection
-        End If
-        ' Add the current past group to the student's collection of past groups
-        pastGroups(studentName).Add groupName
-    Next i
-
-    ' Load modules and grades into dictionary
-    lastRowModules = wsModules.Cells(wsModules.Rows.Count, 1).End(xlUp).Row
-    For i = 2 To lastRowModules
-        studentName = wsModules.Cells(i, 1).Value
-        moduleName = wsModules.Cells(i, 2).Value
-        grade = wsModules.Cells(i, 3).Value
-        If Not modulesTaken.Exists(studentName) Then
-            Set modulesTaken(studentName) = CreateObject("Scripting.Dictionary")
-        End If
-        modulesTaken(studentName)(moduleName) = grade
-    Next i
-
-    ' Define group requirements and quotas
-    ' !!! FORMAT: Unit_Name, ((Keyword_1, Keyword_2, ..., Keyword_N), Quota_Number)
-    groupRequirements.Add "A", Array(Array("cloud", "machine learning"), 1)
-    groupRequirements.Add "B", Array(Array("data"), 2)
-    groupRequirements.Add "C", Array(Array("gender"), 2)
-
-    ' Assign students to new groups
-    For Each groupName In groupRequirements.Keys
-        Dim moduleKeywords As Variant
-        moduleKeywords = groupRequirements(groupName)(0)
-        quota = groupRequirements(groupName)(1)
-        Set eligibleStudents = New Collection
-
-        ' Find eligible students
-        For Each student In modulesTaken.Keys
-            studentName = CStr(student) ' Cast to String
-            groupNameStr = CStr(groupName) ' Cast to String
-
-            ' If the student has no past groups or doesn't have the current group being considered
-            If Not pastGroups.Exists(studentName) Then
-                If IsEligible(studentName, moduleKeywords, modulesTaken) Then
-                    eligibleStudents.Add Array(studentName, GetBestGrade(studentName, moduleKeywords, modulesTaken))
-                End If
-            Else
-                If Not PastGroupContains(pastGroups(studentName), groupNameStr) Then
-                    If IsEligible(studentName, moduleKeywords, modulesTaken) Then
-                        eligibleStudents.Add Array(studentName, GetBestGrade(studentName, moduleKeywords, modulesTaken))
-                    End If
-                End If
-            End If
-        Next student
-
-        ' Sort eligible students by grade
-        Dim sortedStudents() As Variant
-        If eligibleStudents.Count > 0 Then
-            sortedStudents = SortByGrade(eligibleStudents)
+    
+    ' Populate pastUnitsDict
+    Dim unitName As String
+    Dim personName As String
+    Dim unitArr() As String
+    For Each cell In wsPastUnits.Range("A2:A" & lastRowPastUnits) ' Assume names are in Col A
+        personName = CStr(cell.Value)
+        unitName = cell.Offset(0, 1).Value ' Gets the value in the column to the right
+        ' Create a new person key, or add the unit to their name if they already exist in the dict
+        If Not pastUnitsDict.Exists(personName) Then
+            ReDim unitArr(0)
+            unitArr(0) = unitName
+            pastUnitsDict(personName) = unitArr
         Else
-            ReDim sortedStudents(1 To 1, 1 To 2)
+            
         End If
-
-        ' Assign students to group based on quota
-        For j = 1 To Application.Min(quota, UBound(sortedStudents, 1))
-            newAssignments.Add Array(sortedStudents(j, 1), groupName)
-            RemoveFromCollection allStudents, sortedStudents(j, 1) ' Remove assigned students from all students collection
-        Next j
-    Next groupName
-
-    ' Assign remaining students randomly to groups with unmet quotas
-    Randomize
-    For Each groupName In groupRequirements.Keys
-        quota = groupRequirements(groupName)(1)
-
-        ' Calculate how many more students are needed for this group
-        Dim currentCount As Long
-        currentCount = 0
-        For i = 1 To newAssignments.Count
-            If newAssignments(i)(1) = groupName Then currentCount = currentCount + 1
-        Next i
-
-        ' Randomly assign students to fulfill the quota
-        While currentCount < quota And allStudents.Count > 0
-            Dim randomIndex As Long
-            randomIndex = Int(allStudents.Count * Rnd + 1)
-            newAssignments.Add Array(allStudents(randomIndex), groupName)
-            RemoveFromCollection allStudents, allStudents(randomIndex)
-            currentCount = currentCount + 1
-        Wend
-    Next groupName
-
-    ' Output new assignments to the existing "NewAssignments" sheet
-    wsNewAssignments.Cells(1, 2).Value = "Unit"
-    ' Loop through the existing list of names in column A and fill the second column with group assignments
-    For i = 1 To wsNewAssignments.Cells(wsNewAssignments.Rows.Count, 1).End(xlUp).Row
-        studentName = wsNewAssignments.Cells(i, 1).Value
-        For j = 1 To newAssignments.Count
-            If newAssignments(j)(0) = studentName Then
-                wsNewAssignments.Cells(i, 2).Value = newAssignments(j)(1)
-                Exit For
-            End If
-        Next j
-    Next i
+    Next cell
 End Sub
-
-
-Function PastGroupContains(pastGroupCollection As Collection, groupName As String) As Boolean
-    Dim pastGroup As Variant
-    For Each pastGroup In pastGroupCollection
-        If pastGroup = groupName Then
-            PastGroupContains = True
-            Exit Function
-        End If
-    Next pastGroup
-    PastGroupContains = False
-End Function
-
-
-Function IsEligible(studentName As String, moduleKeywords As Variant, modulesTaken As Variant) As Boolean
-    Dim moduleName As Variant
-    Dim keyword As Variant
-    IsEligible = False
-    For Each moduleName In modulesTaken(studentName).Keys
-        For Each keyword In moduleKeywords
-            If InStr(1, moduleName, keyword, vbTextCompare) > 0 Then
-                IsEligible = True
-                Exit Function
-            End If
-        Next keyword
-    Next moduleName
-End Function
-
-
-Function GetBestGrade(studentName As String, moduleKeywords As Variant, modulesTaken As Variant) As Double
-    Dim moduleName As Variant
-    Dim keyword As Variant
-    Dim bestGrade As Double
-    Dim grade As String
-    bestGrade = 0
-    For Each moduleName In modulesTaken(studentName).Keys
-        For Each keyword In moduleKeywords
-            If InStr(1, moduleName, keyword, vbTextCompare) > 0 Then
-                grade = modulesTaken
-
-        ' Sort eligible students by grade
-        Dim sortedStudents() As Variant
-        If eligibleStudents.Count > 0 Then
-            sortedStudents = SortByGrade(eligibleStudents)
-        Else
-            ReDim sortedStudents(1 To 1, 1 To 2)
-        End If
-
-        ' Assign students to group based on quota
-        For j = 1 To Application.Min(quota, UBound(sortedStudents, 1))
-            newAssignments.Add Array(sortedStudents(j, 1), groupName)
-            RemoveFromCollection allStudents, sortedStudents(j, 1) ' Remove assigned students from all students collection
-        Next j
-    Next groupName
-
-    ' Assign remaining students randomly to groups with unmet quotas
-    Randomize
-    For Each groupName In groupRequirements.Keys
-        quota = groupRequirements(groupName)(1)
-
-        ' Calculate how many more students are needed for this group
-        Dim currentCount As Long
-        currentCount = 0
-        For i = 1 To newAssignments.Count
-            If newAssignments(i)(1) = groupName Then currentCount = currentCount + 1
-        Next i
-
-        ' Randomly assign students to fulfill the quota
-        While currentCount < quota And allStudents.Count > 0
-            Dim randomIndex As Long
-            randomIndex = Int(allStudents.Count * Rnd + 1)
-            newAssignments.Add Array(allStudents(randomIndex), groupName)
-            RemoveFromCollection allStudents, allStudents(randomIndex)
-            currentCount = currentCount + 1
-        Wend
-    Next groupName
-
-    ' Output new assignments to the existing "NewAssignments" sheet
-    wsNewAssignments.Cells(1, 2).Value = "Unit"
-    ' Loop through the existing list of names in column A and fill the second column with group assignments
-    For i = 1 To wsNewAssignments.Cells(wsNewAssignments.Rows.Count, 1).End(xlUp).Row
-        studentName = wsNewAssignments.Cells(i, 1).Value
-        For j = 1 To newAssignments.Count
-            If newAssignments(j)(0) = studentName Then
-                wsNewAssignments.Cells(i, 2).Value = newAssignments(j)(1)
-                Exit For
-            End If
-        Next j
-    Next i
-End Function
-
-
-Function ConvertGrade(grade As String) As Double
-    Select Case grade
-        Case "EX"
-            ConvertGrade = 4
-        Case "A+"
-            ConvertGrade = 4
-        Case "A"
-            ConvertGrade = 4
-        Case "A-"
-            ConvertGrade = 3.7
-        Case "B+"
-            ConvertGrade = 3.3
-        Case "B"
-            ConvertGrade = 3
-        Case "B-"
-            ConvertGrade = 2.7
-        Case "C+"
-            ConvertGrade = 2.3
-        Case "C"
-            ConvertGrade = 2
-        Case "C-"
-            ConvertGrade = 1.7
-        Case "D+"
-            ConvertGrade = 1.3
-        Case "D"
-            ConvertGrade = 1
-        Case "F"
-            ConvertGrade = 0
-        Case Else
-            ConvertGrade = 0  ' Default for unrecognized grades
-    End Select
-End Function
-
-
-Function SortByGrade(students As Collection) As Variant
-    Dim tempArray() As Variant
-    Dim i As Long, j As Long
-    Dim temp1 As Variant, temp2 As Variant
-
-    ' Convert collection to array for sorting
-    ReDim tempArray(1 To students.Count, 1 To 2)
-    For i = 1 To students.Count
-        tempArray(i, 1) = students(i)(0)
-        tempArray(i, 2) = students(i)(1)
-    Next i
-
-    ' Bubble sort by grade (descending)
-    For i = 1 To UBound(tempArray, 1) - 1
-        For j = i + 1 To UBound(tempArray, 1)
-            If tempArray(i, 2) < tempArray(j, 2) Then
-                ' Swap the elements
-                temp1 = tempArray(i, 1)
-                temp2 = tempArray(i, 2)
-                tempArray(i, 1) = tempArray(j, 1)
-                tempArray(i, 2) = tempArray(j, 2)
-                tempArray(j, 1) = temp1
-                tempArray(j, 2) = temp2
-            End If
-        Next j
-    Next i
-
-    SortByGrade = tempArray
-End Function
-
-
-Sub RemoveFromCollection(coll As Collection, item As Variant)
-    Dim i As Long
-    For i = 1 To coll.Count
-        If coll(i) = item Then
-            coll.Remove i
-            Exit Sub
-        End If
-    Next i
-End Sub
-
-
-Function CollectionContains(coll As Collection, item As Variant) As Boolean
-    Dim i As Long
-    For i = 1 To coll.Count
-        If coll(i) = item Then
-            CollectionContains = True
-            Exit Function
-        End If
-    Next i
-    ' If the loop completes without finding the item, it doesn't exist in the collection
-    CollectionContains = False
-End Function
