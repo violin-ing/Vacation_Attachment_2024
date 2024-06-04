@@ -4,11 +4,13 @@ Sub AssignUnits()
     Dim wsNewAssgn As Worksheet
     Dim wsPastUnits As Worksheet
     Dim wsModGrades As Worksheet
+    Dim wsUnitReq As Worksheet
     
     ' Last Worksheet Rows
     Dim lastRowNewAssgn As Long
     Dim lastRowPastUnits As Long
     Dim lastRowModGrades As Long
+    Dim lastRowUnitReq As Long
     
     ' Looping Variables
     Dim i As Long, j As Long
@@ -18,45 +20,71 @@ Sub AssignUnits()
     Dim newAssgnDict As Object
     Dim modGradesDict As Object
     Dim availUnitsDict As Object
+    Dim unitReqDict As Object
+    Dim unitQuotaDict As Object
     
     
+    ' SETTING VARIABLES:
     ' Set worksheets
     Set wsNewAssgn = ThisWorkbook.Sheets("NewAssignments")
     Set wsPastUnits = ThisWorkbook.Sheets("PastUnits")
     Set wsModGrades = ThisWorkbook.Sheets("ModuleGrades")
+    Set wsUnitReq = ThisWorkbook.Sheets("UnitRequirements")
     
     ' Set Dictionaries
     Set pastUnitsDict = CreateObject("Scripting.Dictionary")
     Set newAssgnDict = CreateObject("Scripting.Dictionary")
     Set modGradesDict = CreateObject("Scripting.Dictionary")
     Set availUnitsDict = CreateObject("Scripting.Dictionary")
+    Set unitReqDict = CreateObject("Scripting.Dictionary")
+    Set unitQuotaDict = CreateObject("Scripting.Dictionary")
     
     ' Set last worksheet rows
     lastRowNewAssgn = wsNewAssgn.Cells(wsNewAssgn.Rows.Count, "A").End(xlUp).Row
     lastRowPastUnits = wsPastUnits.Cells(wsPastUnits.Rows.Count, "A").End(xlUp).Row
     lastRowModGrades = wsModGrades.Cells(wsModGrades.Rows.Count, "A").End(xlUp).Row
+    lastRowUnitReq = wsUnitReq.Cells(wsUnitReq.Rows.Count, "A").End(xlUp).Row
     
     
+    ' INITIALIZING DICTIONARIES:
     ' Populate newAssgnDict with names from NewAssgn worksheet
     For Each cell In wsNewAssgn.Range("A2:A" & lastRowNewAssgn) ' Assume names are in Col A
-        newAssgnDict.Add cell.Value, "0"
+        newAssgnDict.Add cell.value, "0"
     Next cell
-    
     
     ' Populate pastUnitsDict
     Dim unitName As String
     Dim personName As String
     Dim unitArr() As String
     For Each cell In wsPastUnits.Range("A2:A" & lastRowPastUnits) ' Assume names are in Col A
-        personName = CStr(cell.Value)
-        unitName = cell.Offset(0, 1).Value ' Gets the value in the column to the right
+        personName = CStr(cell.value)
+        unitName = cell.Offset(0, 1).value ' Gets the value in the column to the right
         ' Create a new person key, or add the unit to their name if they already exist in the dict
         If Not pastUnitsDict.Exists(personName) Then
-            ReDim unitArr(0)
+            ReDim unitArr(0 To 0)
             unitArr(0) = unitName
             pastUnitsDict(personName) = unitArr
         Else
-            
+            unitArr = pastUnitsDict(personName)
+            ReDim Preserve unitArr(0 To UBound(unitArr) + 1)
+            unitArr(UBound(unitArr)) = unitName
+            pastUnitsDict(personName) = unitArr
         End If
     Next cell
+    
+    ' Populate unitReq and unitQuota dictionaries
+    Dim unitReq() As String
+    Dim unitReqStr As String
+    Dim unitQuota As Long
+    For Each cell In wsUnitReq.Range("A2:A" & lastRowUnitReq)
+        unitName = CStr(cell.value)
+        unitReqStr = cell.Offset(0, 1).value
+        unitReq = Split(unitReqStr, ",")
+        unitQuota = cell.Offset(0, 2).value
+        ' Add keys and values to unitReq and unitQuota dictionaries
+        unitReqDict.Add unitName, unitReq
+        unitQuotaDict.Add unitName, unitQuota
+    Next cell
+    
 End Sub
+
