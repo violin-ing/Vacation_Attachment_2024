@@ -3,13 +3,13 @@ Sub AssignUnits()
     ' Worksheets
     Dim wsNewAssgn As Worksheet
     Dim wsPastUnits As Worksheet
-    Dim wsModGrades As Worksheet
+    Dim wsMods As Worksheet
     Dim wsUnitReq As Worksheet
     
     ' Last Worksheet Rows
     Dim lastRowNewAssgn As Long
     Dim lastRowPastUnits As Long
-    Dim lastRowModGrades As Long
+    Dim lastRowMods As Long
     Dim lastRowUnitReq As Long
     
     ' Looping Variables
@@ -18,7 +18,7 @@ Sub AssignUnits()
     ' Required Dictionaries
     Dim pastUnitsDict As Object
     Dim newAssgnDict As Object
-    Dim modGradesDict As Object
+    Dim modsTakenDict As Object
     Dim availUnitsDict As Object
     Dim unitReqDict As Object
     Dim unitQuotaDict As Object
@@ -28,13 +28,13 @@ Sub AssignUnits()
     ' Set worksheets
     Set wsNewAssgn = ThisWorkbook.Sheets("NewAssignments")
     Set wsPastUnits = ThisWorkbook.Sheets("PastUnits")
-    Set wsModGrades = ThisWorkbook.Sheets("ModuleGrades")
+    Set wsMods = ThisWorkbook.Sheets("ModuleGrades")
     Set wsUnitReq = ThisWorkbook.Sheets("UnitRequirements")
     
     ' Set Dictionaries
     Set pastUnitsDict = CreateObject("Scripting.Dictionary")
     Set newAssgnDict = CreateObject("Scripting.Dictionary")
-    Set modGradesDict = CreateObject("Scripting.Dictionary")
+    Set modsTakenDict = CreateObject("Scripting.Dictionary")
     Set availUnitsDict = CreateObject("Scripting.Dictionary")
     Set unitReqDict = CreateObject("Scripting.Dictionary")
     Set unitQuotaDict = CreateObject("Scripting.Dictionary")
@@ -42,7 +42,7 @@ Sub AssignUnits()
     ' Set last worksheet rows
     lastRowNewAssgn = wsNewAssgn.Cells(wsNewAssgn.Rows.Count, "A").End(xlUp).Row
     lastRowPastUnits = wsPastUnits.Cells(wsPastUnits.Rows.Count, "A").End(xlUp).Row
-    lastRowModGrades = wsModGrades.Cells(wsModGrades.Rows.Count, "A").End(xlUp).Row
+    lastRowMods = wsMods.Cells(wsMods.Rows.Count, "A").End(xlUp).Row
     lastRowUnitReq = wsUnitReq.Cells(wsUnitReq.Rows.Count, "A").End(xlUp).Row
     
     
@@ -57,7 +57,7 @@ Sub AssignUnits()
     Dim personName As String
     Dim unitArr() As String
     For Each cell In wsPastUnits.Range("A2:A" & lastRowPastUnits) ' Assume names are in Col A
-        personName = CStr(cell.value)
+        personName = cell.value
         unitName = cell.Offset(0, 1).value ' Gets the value in the column to the right
         ' Create a new person key, or add the unit to their name if they already exist in the dict
         If Not pastUnitsDict.Exists(personName) Then
@@ -77,7 +77,7 @@ Sub AssignUnits()
     Dim unitReqStr As String
     Dim unitQuota As Long
     For Each cell In wsUnitReq.Range("A2:A" & lastRowUnitReq)
-        unitName = CStr(cell.value)
+        unitName = cell.value
         unitReqStr = cell.Offset(0, 1).value
         unitReq = Split(unitReqStr, ",")
         unitQuota = cell.Offset(0, 2).value
@@ -86,8 +86,29 @@ Sub AssignUnits()
         unitQuotaDict.Add unitName, unitQuota
     Next cell
     
+    ' Populate modsTaken dictionary
+    Dim modsArr() As String
+    Dim moduleTaken As String
+    For Each cell In wsMods.Range("A2:A" & lastRowMods)
+        personName = cell.value
+        moduleTaken = cell.Offset(0, 1).value
+        If Not modsTakenDict.Exists(personName) Then
+            ReDim modsArr(0 To 0)
+            modsArr(0) = moduleTaken
+            modsTakenDict(personName) = modsArr
+        Else
+            modsArr = modsTakenDict(personName)
+            ReDim Preserve modsArr(0 To UBound(modsArr) + 1)
+            modsArr(UBound(modsArr)) = moduleTaken
+            modsTakenDict(personName) = modsArr
+        End If
+    Next cell
+      
+      
     ' Get a dictionary of possible units that each person can be posted to
     Dim key As Variant
     For Each key In newAssgnDict.Keys()
-        
+    
+    Next key
 End Sub
+
