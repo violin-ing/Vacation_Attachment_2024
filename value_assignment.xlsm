@@ -107,8 +107,20 @@ Sub AssignUnits()
       
     ' Get a dictionary of possible units that each person can be posted to
     Dim key As Variant
+    Dim possibleUnits() As String
     For Each key In newAssgnDict.Keys()
-    
+        
     Next key
+    
+    
+    ' DEBUGGING LINES:
+    Dim v As Variant, k As Variant
+    Debug.Print "BALLS"
+    For Each k In modsTakenDict.Keys()
+        Debug.Print k
+        For Each v In modsTakenDict(k)
+            Debug.Print v
+        Next v
+    Next k
 End Sub
 
