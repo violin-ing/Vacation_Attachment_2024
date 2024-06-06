@@ -18,46 +18,11 @@ Sub TransferDataAndFillDifficulty()
         name = srcWs.Cells(i, 1).Value
         cert = srcWs.Cells(i, 2).Value
         dateVal = srcWs.Cells(i, 3).Value
-        
-        ' Check if the combination already exists in the destination sheet
-        Dim found As Boolean
-        found = False
-        For j = 2 To destLastRow
-            If destWs.Cells(j, 2).Value = name And destWs.Cells(j, 8).Value = cert Then
-                ' Combination found, set difficulty
-                found = True
-                destWs.Cells(j, 9).Value = GetPreviousDifficulty(destWs, name, cert)
-                Exit For
-            End If
-        Next j
-        
-        ' If combination not found, add it to the destination sheet
-        If Not found Then
-            destWs.Cells(destLastRow + 1, 2).Value = name
-            destWs.Cells(destLastRow + 1, 8).Value = cert
-            destWs.Cells(destLastRow + 1, 10).Value = dateVal ' Assuming the date goes to column J
-            destWs.Cells(destLastRow + 1, 9).Value = GetPreviousDifficulty(destWs, name, cert)
-            destLastRow = destLastRow + 1
+
+        destWs.Cells(destLastRow + 1, 2).Value = name
+        destWs.Cells(destLastRow + 1, 8).Value = cert
+        destWs.Cells(destLastRow + 1, 10).Value = dateVal ' Assuming the date goes to column J
+        destLastRow = destLastRow + 1
         End If
     Next i
 End Sub
-
-Function GetPreviousDifficulty(ws As Worksheet, name As String, cert As String) As String
-    Dim lastRow As Long, i As Long
-    
-    ' Find the last row in the destination sheet
-    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row
-    
-    ' Loop through each row in the destination sheet
-    For i = lastRow To 2 Step -1 ' Start from the last row and move upwards
-        ' Check if the row matches the name and certification
-        If ws.Cells(i, 2).Value = name And ws.Cells(i, 8).Value = cert Then
-            ' If match found, return the difficulty from column I
-            GetPreviousDifficulty = ws.Cells(i, 9).Value
-            Exit Function
-        End If
-    Next i
-    
-    ' If no match found, return an empty string
-    GetPreviousDifficulty = ""
-End Function
