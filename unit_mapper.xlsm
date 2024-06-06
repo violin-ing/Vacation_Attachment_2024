@@ -1,5 +1,3 @@
-' This script uses dictionaries to map values to their corresponding keys from one spreadsheet to another
-
 Sub MapUnits()
     Dim ws1 As Worksheet
     Dim ws2 As Worksheet
