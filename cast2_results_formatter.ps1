@@ -1,14 +1,9 @@
-# Ensure ImportExcel module is available
-if (-not (Get-Module -ListAvailable -Name ImportExcel)) {
-    Install-Module -Name ImportExcel -Force
-}
-
 # Prompt the user for the date
 $date = Read-Host "Enter the date in the format '2024-06-05'"
 
 # Path to the input CSV file and the output Excel file
-$inputCsv = "path\to\your\datafile.csv" # Replace with the path to your CSV file
-$outputExcel = "path\to\filtered_data.xlsx" # Replace with the desired path for the Excel file
+$inputCsv = "C:\path\to\your\datafile.csv" # Replace with the path to your CSV file
+$outputExcel = "C:\path\to\filtered_data.xlsx" # Replace with the desired path for the Excel file
 
 # Function to normalize date format in email
 function Get-DatePartFromEmail($email) {
@@ -36,7 +31,40 @@ foreach ($row in $data) {
     }
 }
 
-# Export the filtered data to an Excel file
-$filteredData | Export-Excel -Path $outputExcel -WorksheetName "FilteredData" -AutoSize
+# Create an Excel application object
+$excel = New-Object -ComObject Excel.Application
+$excel.Visible = $false
+$workbook = $excel.Workbooks.Add()
+$worksheet = $workbook.Worksheets.Item(1)
+
+# Set header values
+$headers = @("Email", "TestType", "Score", "TotalScore")
+for ($i = 0; $i -lt $headers.Length; $i++) {
+    $worksheet.Cells.Item(1, $i + 1).Value2 = $headers[$i]
+}
+
+# Add filtered data to the worksheet
+$rowIndex = 2
+foreach ($item in $filteredData) {
+    $worksheet.Cells.Item($rowIndex, 1).Value2 = $item.Email
+    $worksheet.Cells.Item($rowIndex, 2).Value2 = $item.TestType
+    $worksheet.Cells.Item($rowIndex, 3).Value2 = $item.Score
+    $worksheet.Cells.Item($rowIndex, 4).Value2 = $item.TotalScore
+    $rowIndex++
+}
+
+# Auto-fit the columns
+$worksheet.Columns.AutoFit()
+
+# Save the workbook
+$workbook.SaveAs($outputExcel)
+$excel.Quit()
+
+# Release the COM objects
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($worksheet) | Out-Null
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook) | Out-Null
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+[GC]::Collect()
+[GC]::WaitForPendingFinalizers()
 
 Write-Host "Filtered data has been exported to $outputExcel"
