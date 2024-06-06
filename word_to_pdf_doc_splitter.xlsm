@@ -1,5 +1,3 @@
-' This script segments a long MS Word document into smaller PDF documents, each being a fixed number of pages
-
 Sub SplitDocumentToPDFs()
     Dim doc As Document
     Dim pageCount As Long
