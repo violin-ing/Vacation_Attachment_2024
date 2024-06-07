@@ -49,71 +49,76 @@ Sub AssignUnits()
     ' INITIALIZING DICTIONARIES:
     ' Populate newAssgnDict with names from NewAssgn worksheet
     For Each cell In wsNewAssgn.Range("A2:A" & lastRowNewAssgn) ' Assume names are in Col A
-        newAssgnDict.Add cell.value, "0"
+        newAssgnDict.Add cell.Value, "0"
     Next cell
     
     ' Populate pastUnitsDict
     Dim unitName As String
     Dim personName As String
-    Dim unitArr() As String
+    Dim unitArr As String
     For Each cell In wsPastUnits.Range("A2:A" & lastRowPastUnits) ' Assume names are in Col A
-        personName = cell.value
-        unitName = cell.Offset(0, 1).value ' Gets the value in the column to the right
-        ' Create a new person key, or add the unit to their name if they already exist in the dict
+        personName = cell.Value
+        unitName = cell.Offset(0, 1).Value ' Gets the value in the column to the right
         If Not pastUnitsDict.Exists(personName) Then
-            ReDim unitArr(0 To 0)
-            unitArr(0) = unitName
-            pastUnitsDict(personName) = unitArr
+            ' Create a new person key, or add the unit to their name if they already exist in the dict
+            pastUnitsDict(personName) = unitName
         Else
+            ' If the person already exists in the dict, then add the new past unit to their existing list
             unitArr = pastUnitsDict(personName)
-            ReDim Preserve unitArr(0 To UBound(unitArr) + 1)
-            unitArr(UBound(unitArr)) = unitName
+            unitArr = unitArr & "," & unitName
             pastUnitsDict(personName) = unitArr
         End If
     Next cell
     
     ' Populate unitReq and unitQuota dictionaries
-    Dim unitReq() As String
-    Dim unitReqStr As String
+    Dim unitReq As String
     Dim unitQuota As Long
     For Each cell In wsUnitReq.Range("A2:A" & lastRowUnitReq)
-        unitName = cell.value
-        unitReqStr = cell.Offset(0, 1).value
-        unitReq = Split(unitReqStr, ",")
-        unitQuota = cell.Offset(0, 2).value
+        unitName = cell.Value
+        unitReq = cell.Offset(0, 1).Value
+        unitQuota = cell.Offset(0, 2).Value
         ' Add keys and values to unitReq and unitQuota dictionaries
         unitReqDict.Add unitName, unitReq
         unitQuotaDict.Add unitName, unitQuota
     Next cell
     
     ' Populate modsTaken dictionary
-    Dim modsArr() As String
     Dim moduleTaken As String
+    Dim modsTaken As String
+    Dim modsArr() As String
     For Each cell In wsMods.Range("A2:A" & lastRowMods)
-        personName = cell.value
-        moduleTaken = cell.Offset(0, 1).value
+        personName = cell.Value
+        moduleTaken = cell.Offset(0, 1).Value
         If Not modsTakenDict.Exists(personName) Then
-            ReDim modsArr(0 To 0)
-            modsArr(0) = moduleTaken
-            modsTakenDict(personName) = modsArr
+            ' If the person has not yet been logged in the dictionary, add their name
+            modsTakenDict(personName) = moduleTaken
         Else
-            modsArr = modsTakenDict(personName)
-            ReDim Preserve modsArr(0 To UBound(modsArr) + 1)
-            modsArr(UBound(modsArr)) = moduleTaken
-            modsTakenDict(personName) = modsArr
+            ' For those who already have entries in the dictionary, add on to their list of mods
+            modsTaken = modsTakenDict(personName)
+            modsTaken = modsTaken & "," & moduleTaken
+            modsTakenDict(personName) = modsTaken
         End If
     Next cell
-      
-      
-    ' Get a dictionary of possible units that each person can be posted to
+    
+    ' Create a dictionary of possible units that each person can be posted to
     Dim name As Variant, unit As Variant
-    Dim possibleUnits() As String
+    Dim possibleUnits As String
+    Dim pastUnits As String
     Dim pastUnitsArr() As String
     For Each name In newAssgnDict.Keys()
         For Each unit In unitQuotaDict.Keys()
-            pastUnitsArr = pastUnitsDict(name)
-            If IsInArray(pastUnitsArr, CStr(unit)) Then
-                
+            pastUnits = pastUnitsDict(name)
+            pastUnitsArr = Split(pastUnits, ",")
+            If Not IsInArray(pastUnitsArr, CStr(unit)) Then
+                If newAssgnDict(name) = "0" Then
+                    ' If we haven't generated a list of possible units for someone, then enter the first possible one
+                    newAssgnDict(name) = unit
+                Else
+                    ' Add on to the existing list of possible units for a particular person
+                    possibleUnits = newAssgnDict(name)
+                    possibleUnits = possibleUnits & "," & unit
+                    newAssgnDict(name) = possibleUnits
+                End If
             End If
         Next unit
     Next name
@@ -122,11 +127,8 @@ Sub AssignUnits()
     ' DEBUGGING LINES:
     Dim v As Variant, k As Variant
     Debug.Print "DEBUGGING"
-    For Each k In modsTakenDict.Keys()
-        Debug.Print k
-        For Each v In modsTakenDict(k)
-            Debug.Print v
-        Next v
+    For Each k In newAssgnDict.Keys()
+        Debug.Print k & "    " & newAssgnDict(k)
     Next k
 End Sub
 
