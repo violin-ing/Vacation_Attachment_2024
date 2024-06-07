@@ -100,24 +100,39 @@ Sub AssignUnits()
         End If
     Next cell
     
-    ' Create a dictionary of possible units that each person can be posted to
+    ' Create a dictionary of possible units that each person can be posted to (using newAssgnDict)
     Dim name As Variant, unit As Variant
     Dim possibleUnits As String
     Dim pastUnits As String
     Dim pastUnitsArr() As String
+    Dim moduleOK As Boolean
+    moduleOK = False
+    Dim personMods() As String
+    Dim unitMods() As String
     For Each name In newAssgnDict.Keys()
         For Each unit In unitQuotaDict.Keys()
             pastUnits = pastUnitsDict(name)
             pastUnitsArr = Split(pastUnits, ",")
             If Not IsInArray(pastUnitsArr, CStr(unit)) Then
-                If newAssgnDict(name) = "0" Then
-                    ' If we haven't generated a list of possible units for someone, then enter the first possible one
-                    newAssgnDict(name) = unit
+                ' Check if the current unit's module requests are fulfilled by the current person's mods taken
+                If Not unitReqDict.Exists(unit) Then
+                    moduleOK = True
                 Else
-                    ' Add on to the existing list of possible units for a particular person
-                    possibleUnits = newAssgnDict(name)
-                    possibleUnits = possibleUnits & "," & unit
-                    newAssgnDict(name) = possibleUnits
+                    unitMods = Split(unitReqDict(unit), ",")
+                    personMods = Split(modsTakenDict(name), ",")
+                    ' Loop through unitMods and personMods and confirm if there are any matches
+                    
+                End If
+                If moduleOK Then
+                    If newAssgnDict(name) = "0" Then
+                        ' If we haven't generated a list of possible units for someone, then enter the first possible one
+                        newAssgnDict(name) = unit
+                    Else
+                        ' Add on to the existing list of possible units for a particular person
+                        possibleUnits = newAssgnDict(name)
+                        possibleUnits = possibleUnits & "," & unit
+                        newAssgnDict(name) = possibleUnits
+                    End If
                 End If
             End If
         Next unit
