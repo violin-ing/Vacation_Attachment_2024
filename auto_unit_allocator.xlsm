@@ -102,15 +102,16 @@ Sub AssignUnits()
     
     ' Create a dictionary of possible units that each person can be posted to (using newAssgnDict)
     Dim name As Variant, unit As Variant
+    Dim unitMod As Variant, personMod As Variant
     Dim possibleUnits As String
     Dim pastUnits As String
     Dim pastUnitsArr() As String
     Dim moduleOK As Boolean
-    moduleOK = False
     Dim personMods() As String
     Dim unitMods() As String
     For Each name In newAssgnDict.Keys()
         For Each unit In unitQuotaDict.Keys()
+            moduleOK = False ' Initialize moduleOK to be False first
             pastUnits = pastUnitsDict(name)
             pastUnitsArr = Split(pastUnits, ",")
             If Not IsInArray(pastUnitsArr, CStr(unit)) Then
@@ -121,7 +122,17 @@ Sub AssignUnits()
                     unitMods = Split(unitReqDict(unit), ",")
                     personMods = Split(modsTakenDict(name), ",")
                     ' Loop through unitMods and personMods and confirm if there are any matches
-                    
+                    For Each unitMod In unitMods
+                        For Each personMod In personMods
+                            If personMod = unitMod Then
+                                moduleOK = True
+                                Exit For
+                            End If
+                        Next personMod
+                        If moduleOK Then
+                            Exit For
+                        End If
+                    Next unitMod
                 End If
                 If moduleOK Then
                     If newAssgnDict(name) = "0" Then
