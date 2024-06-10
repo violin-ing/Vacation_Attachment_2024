@@ -124,16 +124,20 @@ Sub AssignUnits()
                     ' Loop through unitMods and personMods and confirm if there are any matches
                     For Each unitMod In unitMods
                         For Each personMod In personMods
-                            If personMod = unitMod Then
+                            personMod = Trim(personMod)
+                            unitMod = Trim(unitMod)
+                            If UCase(personMod) Like UCase("*" & unitMod & "*") Then
                                 moduleOK = True
                                 Exit For
                             End If
                         Next personMod
+                        
                         If moduleOK Then
                             Exit For
                         End If
                     Next unitMod
                 End If
+                
                 If moduleOK Then
                     If newAssgnDict(name) = "0" Then
                         ' If we haven't generated a list of possible units for someone, then enter the first possible one
@@ -150,12 +154,11 @@ Sub AssignUnits()
     Next name
     
     
-    ' DEBUGGING LINES:
-    Dim v As Variant, k As Variant
-    Debug.Print "DEBUGGING"
-    For Each k In newAssgnDict.Keys()
-        Debug.Print k & "    " & newAssgnDict(k)
-    Next k
+    ' Print results out to NewAssignments sheet
+    Dim cellLooper As Variant
+    For Each cellLooper In wsNewAssgn.Range("A2:A" & lastRowNewAssgn)
+        cellLooper.Offset(0, 1).Value = newAssgnDict(Trim(cellLooper.Value))
+    Next cellLooper
 End Sub
 
 
