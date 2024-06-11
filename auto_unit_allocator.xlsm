@@ -100,6 +100,8 @@ Sub AssignUnits()
         End If
     Next cell
     
+    
+    ' UNIT ASSIGNMENT ALGORITHM:
     ' Create a dictionary of possible units that each person can be posted to (using newAssgnDict)
     Dim name As Variant, unit As Variant, currUnit As Variant
     Dim unitMod As Variant, personMod As Variant
@@ -137,7 +139,6 @@ Sub AssignUnits()
                         End If
                     Next unitMod
                 End If
-                
                 If moduleOK Then
                     If newAssgnDict(name) = "0" Then
                         ' If we haven't generated a list of possible units for someone, then enter the first possible one
@@ -166,7 +167,6 @@ Sub AssignUnits()
             updateUnits = updateUnits & "poo"
             newAssgnDict(nameKey) = updateUnits
         End If
-        
         For Each unitKey In unitQuotaDict.keys()
             pastUnitsArr1 = Split(pastUnitsDict(nameKey), ",")
             If Not IsInArray(pastUnitsArr1, CStr(unitKey)) Then
@@ -199,10 +199,11 @@ Sub AssignUnits()
         End If
     Next name
     
-    
-    ' Try to assign units the rest of the people who have available preferences
-    ' Use the remaining quota for each group as a priority marker
+    ' Assign units to the rest of the people who have available suitable units
+    ' Use the remaining quota for each unit as a priority marker
     Dim prefUnits() As String
+    Dim maxUnit As String
+    Dim remNum As Long
     For Each name In newAssgnDict.keys()
         If newAssgnDict(name) Like "*poo*" Then
             currUnits = Split(newAssgnDict(name), "poo")
@@ -212,23 +213,54 @@ Sub AssignUnits()
                 cfmUnit = prefUnits(0)
                 unitQuotaDict(cfmUnit) = unitQuotaDict(cfmUnit) - 1
                 newAssgnDict(name) = cfmUnit
-            Else
-                ' PROGRESS UPDATE 06102024 !!!
+            ElseIf length > 1 Then
+                maxUnit = prefUnits(0)
+                remNum = unitQuotaDict(maxUnit)
+                For Each unitKey In prefUnits
+                    If unitQuotaDict(unitKey) >= remNum Then
+                        maxUnit = unitKey
+                        remNum = unitQuotaDict(unitKey)
+                    End If
+                Next unitKey
+                unitQuotaDict(maxUnit) = unitQuotaDict(maxUnit) - 1
+                newAssgnDict(name) = maxUnit
             End If
+        End If
     Next name
     
+    ' Deal with the remaining people who don't have any suitable units
+    ' Post them to units that they have yet to go to before
+    For Each name In newAssgnDict.keys()
+        If newAssgnDict(name) Like "*poo*" Then
+            currUnits = Split(newAssgnDict(name), "poo")
+            prefUnits = Split(currUnits(1), ",")
+            length = UBound(prefUnits) - LBound(prefUnits) + 1
+            If length = 1 Then
+                cfmUnit = prefUnits(0)
+                unitQuotaDict(cfmUnit) = unitQuotaDict(cfmUnit) - 1
+                newAssgnDict(name) = cfmUnit
+            ElseIf length > 1 Then
+                maxUnit = prefUnits(0)
+                remNum = unitQuotaDict(maxUnit)
+                For Each unitKey In prefUnits
+                    If unitQuotaDict(unitKey) >= remNum Then
+                        maxUnit = unitKey
+                        remNum = unitQuotaDict(unitKey)
+                    End If
+                Next unitKey
+                unitQuotaDict(maxUnit) = unitQuotaDict(maxUnit) - 1
+                newAssgnDict(name) = maxUnit
+            End If
+        End If
+    Next name
+    
+    
+    ' OUTPUT:
     ' Print results out to NewAssignments sheet
     Dim cellLooper As Variant
     For Each cellLooper In wsNewAssgn.Range("A2:A" & lastRowNewAssgn)
         cellLooper.Offset(0, 1).Value = newAssgnDict(Trim(cellLooper.Value))
     Next cellLooper
-    
-    
-    ' DEBUGGER
-    Dim sex As Variant
-    For Each sex In unitQuotaDict.keys()
-        Debug.Print sex & ", " & unitQuotaDict(sex)
-    Next sex
     
     
     ' CLEAN UP
