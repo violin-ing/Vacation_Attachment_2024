@@ -1,3 +1,9 @@
+' SHEETS REQUIRED: 
+' 1. PastUnits [Name, Unit]
+' 2. ModuleGrades [Name, Module, Grade]
+' 3. UnitRequirements [Unit, Module Preference (CSV format), Quota]
+' 4. NewAssignments [Name, New Unit]
+
 Sub AssignUnits()
     ' DECLARATIONS:
     ' Worksheets
