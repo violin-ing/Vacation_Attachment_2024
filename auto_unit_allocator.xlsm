@@ -230,16 +230,6 @@ Sub AssignUnits()
         End If
     Next name
     
-    Dim k As Variant, p As Variant
-    Debug.Print (vbNewLine & "--- NEXT ---")
-    For Each k In newAssgnDict.keys()
-        Debug.Print (k & ": " & newAssgnDict(k))
-    Next k
-    Debug.Print (vbNewLine)
-    For Each p In unitQuotaDict.keys()
-        Debug.Print (p & ": " & unitQuotaDict(p))
-    Next p
-    
     ' Assign units to the rest of the people who have available suitable units
     ' Use the remaining quota for each unit as a priority marker
     Dim prefUnits() As String
@@ -318,6 +308,19 @@ Sub AssignUnits()
         End If
     Next name
     
+    
+    ' DEBUGGER
+    Dim k As Variant, p As Variant
+    Debug.Print (vbNewLine & "--- NEXT ---")
+    For Each k In newAssgnDict.keys()
+        Debug.Print (k & ": " & newAssgnDict(k))
+    Next k
+    Debug.Print (vbNewLine)
+    For Each p In unitQuotaDict.keys()
+        Debug.Print (p & ": " & unitQuotaDict(p))
+    Next p
+    
+    
     ' For those we are unable to find units for, assign them based on the remaining quota
     For Each name In newAssgnDict.keys()
         If newAssgnDict(name) = "sadge" Then
@@ -364,4 +367,3 @@ Function IsInArray(arr() As String, target As String):
     Next x
     IsInArray = False
 End Function
-
