@@ -111,7 +111,7 @@ Sub AssignUnits()
     Next cell
     
     
-    ' UNIT ASSIGNMENT ALGORITHM:
+    ' FINDING POSSIBLE UNITS FOR EACH PERSON:
     ' Create a dictionary of possible units that each person can be posted to (using newAssgnDict)
     Dim name As Variant, unit As Variant, currUnit As Variant
     Dim unitMod As Variant, personMod As Variant
@@ -193,8 +193,16 @@ Sub AssignUnits()
         Next unitKey
     Next nameKey
     
-    ' Confirm pre-allocated units
+    
+    ' UNIT ALLOCATION:
+    Dim prefUnits() As String
+    Dim maxUnit As String
+    Dim remNum As Long
     Dim qwerty As String, temp As String, yes() As String
+    Dim length As Long
+    Dim currUnits() As String, cfmUnit As String, tmp As String
+    
+    ' Confirm pre-allocated units
     For Each name In newAssgnDict.keys()
         If newAssgnDict(name) Like "*!*" Then
             yes = Split(newAssgnDict(name), ",")
@@ -209,8 +217,6 @@ Sub AssignUnits()
     Next name
     
     ' Confirm units to all those who have only one unit suitable and edit remaining quotas accordingly
-    Dim length As Long
-    Dim currUnits() As String, cfmUnit As String, tmp As String
     For Each name In newAssgnDict.keys()
         If newAssgnDict(name) Like "*poo*" Then
             If Not newAssgnDict(name) Like "*[!p]poo[!p]*" Then
@@ -232,9 +238,6 @@ Sub AssignUnits()
     
     ' Assign units to the rest of the people who have available suitable units
     ' Use the remaining quota for each unit as a priority marker
-    Dim prefUnits() As String
-    Dim maxUnit As String
-    Dim remNum As Long
     For Each name In newAssgnDict.keys()
         If newAssgnDict(name) Like "*poo*" Then
             currUnits = Split(newAssgnDict(name), "poo")
@@ -308,19 +311,6 @@ Sub AssignUnits()
         End If
     Next name
     
-    
-    ' DEBUGGER
-    Dim k As Variant, p As Variant
-    Debug.Print (vbNewLine & "--- NEXT ---")
-    For Each k In newAssgnDict.keys()
-        Debug.Print (k & ": " & newAssgnDict(k))
-    Next k
-    Debug.Print (vbNewLine)
-    For Each p In unitQuotaDict.keys()
-        Debug.Print (p & ": " & unitQuotaDict(p))
-    Next p
-    
-    
     ' For those we are unable to find units for, assign them based on the remaining quota
     For Each name In newAssgnDict.keys()
         If newAssgnDict(name) = "sadge" Then
@@ -334,6 +324,18 @@ Sub AssignUnits()
     Next name
     
     
+    ' DEBUGGER
+    Dim k As Variant, p As Variant
+    Debug.Print (vbNewLine & "--- NEXT ---")
+    For Each k In newAssgnDict.keys()
+        Debug.Print (k & ": " & newAssgnDict(k))
+    Next k
+    Debug.Print (vbNewLine)
+    For Each p In unitQuotaDict.keys()
+        Debug.Print (p & ": " & unitQuotaDict(p))
+    Next p
+    
+       
     ' OUTPUT:
     ' Print results out to NewAssignments sheet
     Dim cellLooper As Variant
