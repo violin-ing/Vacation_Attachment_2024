@@ -1,32 +1,38 @@
-# Function to format and filter the CSV
-function Format-Csv {
-    param (
-        [string]$inputCsv,
-        [string]$outputTxt,
-        [string]$date
-    )
-
-    # Import the CSV
-    $csvData = Import-Csv -Path $inputCsv
-
-    # Filter and extract relevant data
-    $filteredData = $csvData | Where-Object { $_.Date -eq $date } | Select-Object @{Name="Name";Expression={$_.Column1}}, @{Name="TestName";Expression={$_.Column3}}, @{Name="Score";Expression={$_.Column4}}
-
-    # Create output string
-    $output = $filteredData | ForEach-Object {
-        "Name: $($_.Name) - Test: $($_.TestName) - Score: $($_.Score)"
-    }
-
-    # Write to the output text file
-    $output | Out-File -FilePath $outputTxt -Encoding utf8
-}
-
-# Input parameters
-$inputCsv = "path\to\your\input.csv"
-$outputTxt = "path\to\your\output.txt"
+# Input and output file paths
+$inputFile = "path\to\your\input.txt"
+$outputFile = "path\to\your\output.txt"
 
 # Take date as user input
 $date = Read-Host "Enter the date (format: YYYY-MM-DD)"
 
-# Call the function with the provided parameters
-Format-Csv -inputCsv $inputCsv -outputTxt $outputTxt -date $date
+# Read the input file
+$lines = Get-Content -Path $inputFile
+
+# Initialize an array to hold the filtered and formatted output
+$outputLines = @()
+
+# Process each line
+foreach ($line in $lines) {
+    # Split the line by comma to get columns
+    $columns = $line -split ","
+    
+    # Check if the line contains the specified date
+    if ($columns[2] -eq $date) {
+        # Extract Name (Col 1), Test Name (Col 3), Score (Col 4)
+        $name = $columns[0]
+        $testName = $columns[2]
+        $score = $columns[3]
+        
+        # Format the output line
+        $formattedLine = "Name: $name - Test: $testName - Score: $score"
+        
+        # Add the formatted line to the output array
+        $outputLines += $formattedLine
+    }
+}
+
+# Write the output to the specified file
+$outputLines | Out-File -FilePath $outputFile -Encoding utf8
+
+# Notify the user that the operation is complete
+Write-Host "Filtered and formatted data has been written to $outputFile"
