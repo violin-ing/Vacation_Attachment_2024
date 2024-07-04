@@ -1,6 +1,6 @@
-# Input and output file paths
-$inputFile = "path\to\your\input.txt"
-$outputFile = "path\to\your\output.txt"
+# Input and output file paths (EDIT ACCORDINGLY)
+$inputFile = "C:\Users\user\Desktop\part_results.txt"
+$outputFile = "C:\Users\user\Desktop\out.txt"
 
 # Take date as user input
 $date = Read-Host "Enter the date (format: YYYY-MM-DD)"
@@ -18,13 +18,13 @@ foreach ($line in $lines) {
     
     # Check if the line contains the specified date
     if ($columns[2] -eq $date) {
-        # Extract Name (Col 1), Test Name (Col 3), Score (Col 4)
         $name = $columns[0]
-        $testName = $columns[2]
-        $score = $columns[3]
+        $testName = $columns[3]
+        $score = $columns[5]
+        $total = $columns[7]
         
         # Format the output line
-        $formattedLine = "Name: $name - Test: $testName - Score: $score"
+        $formattedLine = "$name --- $testName --- $score/$total"
         
         # Add the formatted line to the output array
         $outputLines += $formattedLine
