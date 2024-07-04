@@ -1,5 +1,5 @@
 # Input and output file paths (EDIT ACCORDINGLY)
-$inputFile = "C:\Users\user\Desktop\part_results.txt"
+$inputFile = "C:\Users\user\Desktop\part_results.csv"
 $outputFile = "C:\Users\user\Desktop\out.txt"
 
 # Take date as user input
