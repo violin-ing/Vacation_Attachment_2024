@@ -29,6 +29,9 @@ Sub AssignUnits()
     Dim unitReqDict As Object
     Dim unitQuotaDict As Object
     
+    Dim bestPossUnits As Object
+    Dim yetToGoUnits As Object
+    
     
     ' SETTING VARIABLES:
     ' Set worksheets
@@ -44,6 +47,8 @@ Sub AssignUnits()
     Set availUnitsDict = CreateObject("Scripting.Dictionary")
     Set unitReqDict = CreateObject("Scripting.Dictionary")
     Set unitQuotaDict = CreateObject("Scripting.Dictionary")
+    Set bestPossUnits = CreateObject("Scripting.Dictionary")
+    Set yetToGoUnits = CreateObject("Scripting.Dictionary")
     
     ' Set last worksheet rows
     lastRowNewAssgn = wsNewAssgn.Cells(wsNewAssgn.Rows.Count, "A").End(xlUp).Row
@@ -54,12 +59,9 @@ Sub AssignUnits()
     
     ' INITIALIZING DICTIONARIES:
     ' Populate newAssgnDict with names from NewAssgn worksheet
-    For Each cell In wsNewAssgn.Range("A2:A" & lastRowNewAssgn) ' Assume names are in Col A
-        If IsEmpty(cell.Offset(0, 1)) Then
-            newAssgnDict.Add cell.Value, "0"
-        Else
-            newAssgnDict.Add cell.Value, cell.Offset(0, 1).Value & "!"
-        End If
+    For Each cell In wsNewAssgn.Range("A2:A" & lastRowNewAssgn)
+        newAssgnDict.Add cell.Value, "0"
+        ' RESULTANT FORMAT = "Name, 0"
     Next cell
     
     ' Populate pastUnitsDict
@@ -69,7 +71,7 @@ Sub AssignUnits()
     For Each cell In wsPastUnits.Range("A2:A" & lastRowPastUnits) ' Assume names are in Col A
         personName = cell.Value
         unitName = cell.Offset(0, 1).Value ' Gets the value in the column to the right
-        If Not pastUnitsDict.Exists(personName) Then
+        If Not pastUnitsDict.exists(personName) Then
             ' Create a new person key, or add the unit to their name if they already exist in the dict
             pastUnitsDict(personName) = unitName
         Else
@@ -77,6 +79,8 @@ Sub AssignUnits()
             unitArr = pastUnitsDict(personName)
             unitArr = unitArr & "," & unitName
             pastUnitsDict(personName) = unitArr
+            ' RESULTANT FORMAT = "Name: PastUnit1,PastUnit2,PatUnit3"
+            ' If a person has no past units, then they will not be in this dictionary
         End If
     Next cell
     
@@ -88,8 +92,8 @@ Sub AssignUnits()
         unitReq = cell.Offset(0, 1).Value
         unitQuota = cell.Offset(0, 2).Value
         ' Add keys and values to unitReq and unitQuota dictionaries
-        unitReqDict.Add unitName, unitReq
-        unitQuotaDict.Add unitName, unitQuota
+        unitReqDict.Add unitName, unitReq ' FORMAT = "unitName: mod1,mod2,..."
+        unitQuotaDict.Add unitName, unitQuota ' FORMAT = "unitName: quota"
     Next cell
     
     ' Populate modsTaken dictionary
@@ -99,7 +103,7 @@ Sub AssignUnits()
     For Each cell In wsMods.Range("A2:A" & lastRowMods)
         personName = cell.Value
         moduleTaken = cell.Offset(0, 1).Value
-        If Not modsTakenDict.Exists(personName) Then
+        If Not modsTakenDict.exists(personName) Then
             ' If the person has not yet been logged in the dictionary, add their name
             modsTakenDict(personName) = moduleTaken
         Else
@@ -107,233 +111,177 @@ Sub AssignUnits()
             modsTaken = modsTakenDict(personName)
             modsTaken = modsTaken & "," & moduleTaken
             modsTakenDict(personName) = modsTaken
+            ' RESULTANT FORMAT = "Name: module1,module2,module3..."
         End If
     Next cell
     
     
     ' FINDING POSSIBLE UNITS FOR EACH PERSON:
-    ' Create a dictionary of possible units that each person can be posted to (using newAssgnDict)
+    ' Create dictionaries that best match people's modules taken
     Dim name As Variant, unit As Variant, currUnit As Variant
     Dim unitMod As Variant, personMod As Variant
     Dim possibleUnits As String
     Dim pastUnits As String
     Dim pastUnitsArr() As String
-    Dim moduleOK As Boolean
+    Dim goodUnit As Boolean
     Dim personMods() As String
     Dim unitMods() As String
-    For Each name In newAssgnDict.keys()
-        For Each unit In unitQuotaDict.keys()
-            moduleOK = False ' Initialize moduleOK to be False first
-            pastUnits = pastUnitsDict(name)
-            pastUnitsArr = Split(pastUnits, ",")
-            If Not IsInArray(pastUnitsArr, CStr(unit)) Then
-                ' Check if the current unit's module requests are fulfilled by the current person's mods taken
-                If unitReqDict(unit) = "" Then
-                    moduleOK = True
-                Else
-                    unitMods = Split(unitReqDict(unit), ",")
-                    personMods = Split(modsTakenDict(name), ",")
-                    ' Loop through unitMods and personMods and confirm if there are any matches
-                    For Each unitMod In unitMods
-                        For Each personMod In personMods
-                            personMod = Trim(personMod)
-                            unitMod = Trim(unitMod)
-                            If UCase(personMod) Like UCase("*" & unitMod & "*") Then
-                                moduleOK = True
-                                Exit For
-                            End If
-                        Next personMod
-                        
-                        If moduleOK Then
-                            Exit For
-                        End If
-                    Next unitMod
-                End If
-                If moduleOK Then
-                    If newAssgnDict(name) = "0" Then
-                        ' If we haven't generated a list of possible units for someone, then enter the first possible one
-                        newAssgnDict(name) = unit
-                    Else
-                        ' Add on to the existing list of possible units for a particular person
-                        possibleUnits = newAssgnDict(name)
-                        possibleUnits = possibleUnits & "," & unit
-                        newAssgnDict(name) = possibleUnits
+    Dim persMod As Variant
+    
+    ' Populating "bestPossUnits"
+    For Each name In newAssgnDict.keys
+        possibleUnits = "0"
+        personMods = Split(modsTakenDict(name), ",")
+        For Each unit In unitReqDict.keys
+            goodUnit = False
+            unitMods = Split(unitReqDict(unit), ",")
+            For Each unitMod In unitMods
+                For Each persMod In personMods
+                    If LCase(persMod) Like LCase("*" & unitMod & "*") Then
+                        goodUnit = True
+                        ' Exit persMod loop
+                        Exit For
                     End If
+                Next persMod
+                ' Exit unitMod loop
+                If goodUnit Then
+                    Exit For
+                End If
+            Next unitMod
+            ' Add goodUnit to possibleUnits
+            If goodUnit Then
+                If possibleUnits = "0" Then
+                    possibleUnits = unit
+                Else
+                    possibleUnits = possibleUnits & "," & unit
                 End If
             End If
         Next unit
+        If Not possibleUnits = "0" Then
+            bestPossUnits.Add name, possibleUnits
+        End If
+        ' RESULTANT FORMAT = "Name: possibleUnit1,possibleUnit2,..."
     Next name
     
-    ' Add probationary units behind each name's list of suitable units
-    Dim noUnit As Boolean
-    Dim nameKey As Variant, unitKey As Variant
-    Dim updateUnits As String
-    Dim pastUnitsArr1() As String
-    For Each nameKey In newAssgnDict.keys()
-        If newAssgnDict(nameKey) = "0" Then
-            newAssgnDict(nameKey) = "poo"
-        Else
-            updateUnits = newAssgnDict(nameKey)
-            updateUnits = updateUnits & "poo"
-            newAssgnDict(nameKey) = updateUnits
-        End If
-        For Each unitKey In unitQuotaDict.keys()
-            pastUnitsArr1 = Split(pastUnitsDict(nameKey), ",")
-            If Not IsInArray(pastUnitsArr1, CStr(unitKey)) Then
-                If Not newAssgnDict(nameKey) Like "*" & unitKey & "*" Then
-                    If newAssgnDict(nameKey) Like "*poo" Then
-                        newAssgnDict(nameKey) = newAssgnDict(nameKey) & unitKey
+    ' Populating "yetToGoUnits"
+    For Each name In newAssgnDict.keys
+        possibleUnits = "0"
+        If pastUnitsDict.exists(name) Then
+            pastUnitsArr = Split(pastUnitsDict(name), ",")
+            For Each unit In unitReqDict.keys
+                If Not IsInArray(pastUnitsArr, CStr(unit)) Then
+                    If possibleUnits = "0" Then
+                        possibleUnits = unit
                     Else
-                        updateUnits = newAssgnDict(nameKey)
-                        updateUnits = updateUnits & "," & unitKey
-                        newAssgnDict(nameKey) = updateUnits
+                        possibleUnits = possibleUnits & "," & unit
                     End If
                 End If
-            End If
-        Next unitKey
-    Next nameKey
+            Next unit
+        Else
+            For Each unit In unitReqDict.keys
+                If possibleUnits = "0" Then
+                    possibleUnits = unit
+                Else
+                    possibleUnits = possibleUnits & "," & unit
+                End If
+            Next unit
+        End If
+        yetToGoUnits.Add name, possibleUnits
+        ' RESULTANT FORMAT = "Name: possibleUnit1,possibleUnit2,..."
+    Next name
     
     
     ' UNIT ALLOCATION:
     Dim prefUnits() As String
     Dim maxUnit As String
+    Dim maxQuota As Long
     Dim remNum As Long
     Dim qwerty As String, temp As String, yes() As String
     Dim length As Long
     Dim currUnits() As String, cfmUnit As String, tmp As String
     
-    ' Confirm pre-allocated units
-    For Each name In newAssgnDict.keys()
-        If newAssgnDict(name) Like "*!*" Then
-            yes = Split(newAssgnDict(name), ",")
-            temp = Replace(yes(0), "!", "")
-            If unitQuotaDict(temp) > 0 Then
-                newAssgnDict(name) = temp
-                unitQuotaDict(temp) = unitQuotaDict(temp) - 1
-            Else
-                newAssgnDict(name) = Replace(newAssgnDict(name), "!", "")
-            End If
-        End If
-    Next name
-    
-    ' Confirm units to all those who have only one unit suitable and edit remaining quotas accordingly
-    For Each name In newAssgnDict.keys()
-        If newAssgnDict(name) Like "*poo*" Then
-            If Not newAssgnDict(name) Like "*[!p]poo[!p]*" Then
-                tmp = Replace(newAssgnDict(name), "poo", "")
-                currUnits = Split(tmp, ",")
-                length = UBound(currUnits) - LBound(currUnits) + 1
-                If length = 1 Then
-                    cfmUnit = CStr(tmp)
-                    If unitQuotaDict(cfmUnit) > 0 Then
-                        unitQuotaDict(cfmUnit) = unitQuotaDict(cfmUnit) - 1
-                        newAssgnDict(name) = cfmUnit
-                    Else
-                        newAssgnDict(name) = "sadge"
+    ' Assign units to those with matching modules
+    For Each name In bestPossUnits.keys
+        maxQuota = 0
+        maxUnit = "poo"
+        prefUnits = Split(bestPossUnits(name), ",")
+        ' Loop through the units that match a person's mods taken
+        For Each unit In prefUnits
+                currUnits = Split(yetToGoUnits(name), ",")
+                ' Check that the selected unit has yet to be gone to by the person
+                If IsInArray(currUnits, CStr(unit)) Then
+                    If maxQuota <= unitQuotaDict(unit) And unitQuotaDict(unit) > 0 Then
+                        maxUnit = unit
                     End If
                 End If
-            End If
-        End If
-    Next name
-    
-    ' Assign units to the rest of the people who have available suitable units
-    ' Use the remaining quota for each unit as a priority marker
-    For Each name In newAssgnDict.keys()
-        If newAssgnDict(name) Like "*poo*" Then
-            currUnits = Split(newAssgnDict(name), "poo")
-            prefUnits = Split(currUnits(0), ",")
-            length = UBound(prefUnits) - LBound(prefUnits) + 1
-            If length = 1 Then
-                cfmUnit = prefUnits(0)
-                If unitQuotaDict(cfmUnit) > 0 Then
-                    unitQuotaDict(cfmUnit) = unitQuotaDict(cfmUnit) - 1
-                    newAssgnDict(name) = cfmUnit
-                Else
-                    newAssgnDict(name) = "sadge"
-                End If
-            End If
-        End If
-    Next name
-    
-    For Each name In newAssgnDict.keys()
-        If newAssgnDict(name) Like "*poo*" Then
-            currUnits = Split(newAssgnDict(name), "poo")
-            prefUnits = Split(currUnits(0), ",")
-            remNum = 1
-            maxUnit = "sadge"
-            For Each unitKey In prefUnits
-                If unitQuotaDict(unitKey) >= remNum Then
-                    maxUnit = unitKey
-                    remNum = unitQuotaDict(unitKey)
-                End If
-            Next unitKey
-            If Not maxUnit = "sadge" Then
-                unitQuotaDict(maxUnit) = unitQuotaDict(maxUnit) - 1
-                newAssgnDict(name) = maxUnit
-            End If
-        End If
-    Next name
-    
-    ' Deal with the remaining people who don't have any suitable units
-    ' Post them to units that they have yet to go to before
-    For Each name In newAssgnDict.keys()
-        If newAssgnDict(name) Like "*poo*" Then
-            currUnits = Split(newAssgnDict(name), "poo")
-            prefUnits = Split(currUnits(1), ",")
-            length = UBound(prefUnits) - LBound(prefUnits) + 1
-            cfmUnit = "sadge"
-            If length = 1 Then
-                If unitQuotaDict(prefUnits(0)) > 0 And Not cfmUnit = "sadge" Then
-                    cfmUnit = prefUnits(0)
-                    unitQuotaDict(cfmUnit) = unitQuotaDict(cfmUnit) - 1
-                    newAssgnDict(name) = cfmUnit
-                Else
-                    newAssgnDict(name) = "sadge"
-                End If
-            End If
-        End If
-    Next name
-    
-    For Each name In newAssgnDict.keys()
-        If newAssgnDict(name) Like "*poo*" Then
-            currUnits = Split(newAssgnDict(name), "poo")
-            prefUnits = Split(currUnits(1), ",")
-            maxUnit = "sadge"
-            remNum = 0
-            For Each unitKey In prefUnits
-                If unitQuotaDict(unitKey) > remNum Then
-                    maxUnit = unitKey
-                    remNum = unitQuotaDict(unitKey)
-                End If
-            Next unitKey
-            unitQuotaDict(maxUnit) = unitQuotaDict(maxUnit) - 1
+        Next unit
+        If Not maxUnit = "poo" Then
             newAssgnDict(name) = maxUnit
+            unitQuotaDict(maxUnit) = unitQuotaDict(maxUnit) - 1
         End If
     Next name
     
-    ' For those we are unable to find units for, assign them based on the remaining quota
-    For Each name In newAssgnDict.keys()
-        If newAssgnDict(name) = "sadge" Then
-            For Each unit In unitQuotaDict.keys()
-                If unitQuotaDict(unit) > 0 Then
-                    newAssgnDict(name) = unit
-                    unitQuotaDict(unit) = unitQuotaDict(name) - 1
+    ' Assign units to other people
+    For Each name In yetToGoUnits.keys
+        If newAssgnDict(name) = "0" Then
+            maxQuota = 0
+            maxUnit = "poo"
+            prefUnits = Split(yetToGoUnits(name), ",")
+            For Each unit In prefUnits
+                If maxQuota <= unitQuotaDict(unit) And unitQuotaDict(unit) > 0 Then
+                    maxUnit = unit
                 End If
             Next unit
+            If Not maxUnit = "poo" Then
+                newAssgnDict(name) = maxUnit
+                unitQuotaDict(maxUnit) = unitQuotaDict(maxUnit) - 1
+            End If
         End If
     Next name
     
-    
-    ' DEBUGGER
-    Dim k As Variant, p As Variant
-    Debug.Print (vbNewLine & "--- NEXT ---")
-    For Each k In newAssgnDict.keys()
-        Debug.Print (k & ": " & newAssgnDict(k))
-    Next k
-    Debug.Print (vbNewLine)
-    For Each p In unitQuotaDict.keys()
-        Debug.Print (p & ": " & unitQuotaDict(p))
-    Next p
+    ' Assign units randomly to the remaining people who still do not have units
+    Dim nameList() As String
+    Dim names As String
+    Dim poopy As Variant
+    Dim randomIndex As Long
+    names = "l"
+    For Each name In newAssgnDict.keys
+        If newAssgnDict(name) = "0" Then
+            If names = "l" Then
+                names = name
+            Else
+                names = names & "," & name
+            End If
+        End If
+    Next name
+    nameList = Split(names, ",")
+    Do While UBound(nameList) >= LBound(nameList)
+        randomIndex = Int((UBound(nameList) - LBound(nameList) + 1) * Rnd + LBound(nameList))
+        poopy = nameList(randomIndex)
+        If randomIndex < UBound(nameList) Then
+            nameList(randomIndex) = nameList(UBound(nameList))
+        End If
+        
+        For Each unit In unitQuotaDict.keys
+            maxQuota = 0
+            maxUnit = "poo"
+            If unitQuotaDict(unit) >= maxQuota And unitQuotaDict(unit) > 1 Then
+                maxQuota = unitQuotaDict(unit)
+                maxUnit = unit
+            End If
+        Next unit
+        If Not maxUnit = "poo" Then
+            newAssgnDict(poopy) = maxUnit
+        Else
+            newAssgnDict(poopy) = "UNASSIGNED"
+        End If
+        
+        If UBound(nameList) > LBound(nameList) Then
+            ReDim Preserve nameList(LBound(nameList) To UBound(nameList) - 1)
+        Else
+            Exit Do
+        End If
+    Loop
     
        
     ' OUTPUT:
@@ -341,6 +289,7 @@ Sub AssignUnits()
     Dim cellLooper As Variant
     For Each cellLooper In wsNewAssgn.Range("A2:A" & lastRowNewAssgn)
         cellLooper.Offset(0, 1).Value = newAssgnDict(Trim(cellLooper.Value))
+        cellLooper.Offset(0, 2).Value = modsTakenDict(Trim(cellLooper.Value))
     Next cellLooper
     
     
@@ -352,6 +301,8 @@ Sub AssignUnits()
     Set availUnitsDict = Nothing
     Set unitReqDict = Nothing
     Set unitQuotaDict = Nothing
+    Set bestPossUnits = Nothing
+    Set yetToGoUnits = Nothing
     Set wsNewAssgn = Nothing
     Set wsPastUnits = Nothing
     Set wsMods = Nothing
