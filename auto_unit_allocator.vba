@@ -60,7 +60,7 @@ Sub AssignUnits()
     ' INITIALIZING DICTIONARIES:
     ' Populate newAssgnDict with names from NewAssgn worksheet
     For Each cell In wsNewAssgn.Range("A2:A" & lastRowNewAssgn)
-        newAssgnDict.Add cell.Value, "0"
+        newAssgnDict.Add Trim(cell.Value), "0"
         ' RESULTANT FORMAT = "Name, 0"
     Next cell
     
@@ -73,12 +73,12 @@ Sub AssignUnits()
         unitName = cell.Offset(0, 1).Value ' Gets the value in the column to the right
         If Not pastUnitsDict.exists(personName) Then
             ' Create a new person key, or add the unit to their name if they already exist in the dict
-            pastUnitsDict(personName) = unitName
+            pastUnitsDict(Trim(personName)) = Trim(unitName)
         Else
             ' If the person already exists in the dict, then add the new past unit to their existing list
             unitArr = pastUnitsDict(personName)
-            unitArr = unitArr & "," & unitName
-            pastUnitsDict(personName) = unitArr
+            unitArr = unitArr & "," & Trim(unitName)
+            pastUnitsDict(Trim(personName)) = unitArr
             ' RESULTANT FORMAT = "Name: PastUnit1,PastUnit2,PatUnit3"
             ' If a person has no past units, then they will not be in this dictionary
         End If
@@ -88,7 +88,7 @@ Sub AssignUnits()
     Dim unitReq As String
     Dim unitQuota As Long
     For Each cell In wsUnitReq.Range("A2:A" & lastRowUnitReq)
-        unitName = cell.Value
+        unitName = Trim(cell.Value)
         unitReq = cell.Offset(0, 1).Value
         unitQuota = cell.Offset(0, 2).Value
         ' Add keys and values to unitReq and unitQuota dictionaries
@@ -101,7 +101,7 @@ Sub AssignUnits()
     Dim modsTaken As String
     Dim modsArr() As String
     For Each cell In wsMods.Range("A2:A" & lastRowMods)
-        personName = cell.Value
+        personName = Trim(cell.Value)
         moduleTaken = cell.Offset(0, 1).Value
         If Not modsTakenDict.exists(personName) Then
             ' If the person has not yet been logged in the dictionary, add their name
