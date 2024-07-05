@@ -289,7 +289,7 @@ Sub AssignUnits()
     Dim cellLooper As Variant
     For Each cellLooper In wsNewAssgn.Range("A2:A" & lastRowNewAssgn)
         cellLooper.Offset(0, 1).Value = newAssgnDict(Trim(cellLooper.Value))
-        cellLooper.Offset(0, 2).Value = modsTakenDict(Trim(cellLooper.Value))
+        cellLooper.Offset(0, 2).Value = Replace(modsTakenDict(Trim(cellLooper.Value)), ",", ", ")
     Next cellLooper
     
     
